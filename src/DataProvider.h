@@ -40,6 +40,10 @@
 #include "Sensirion_UPT_Core.h"
 #include <string>
 
+#ifndef HISTORY_INTERVAL_MILISECONDS
+#define HISTORY_INTERVAL_MILISECONDS 600000 // 10 minutes
+#endif
+
 class DataProvider: public IProviderCallbacks {
   public:
     explicit DataProvider(IBLELibraryWrapper& libraryWrapper,
@@ -60,7 +64,13 @@ class DataProvider: public IProviderCallbacks {
     void handleDownload();
     void setBatteryLevel(int value);
     void setSampleConfig(DataType dataType);
-    String getDeviceIdString() const;
+    void setHistoryInterval(int interval);
+    uint64_t getHistoryInterval() const;
+    bool historyIntervalChanged();
+    String getDeviceIdString() const;    
+    String getWifiSSID();
+    String getWifiPassword();
+    bool wifiChanged();
     bool isDownloading() const;
     bool isFRCRequested() const;
     uint32_t getReferenceCO2Level() const;
@@ -94,13 +104,18 @@ class DataProvider: public IProviderCallbacks {
     uint32_t _reference_co2_level = 0;
     std::string _altDeviceName = "";
 
+    String _wifiSSID = "";
+    String _wifiPassword = "";
+    bool _wifiSettingsChanged = false;
+
     bool _enableWifiSettings;
     bool _enableBatteryService;
     bool _enableFRCService;
     bool _enableAltDeviceName;
 
     SampleConfig _sampleConfig;
-    uint64_t _historyIntervalMilliSeconds = 600000; // = 10 minutes
+    uint64_t _historyIntervalMilliSeconds = HISTORY_INTERVAL_MILISECONDS;
+    bool _historyIntervalChanged = false;
     uint64_t _latestHistoryTimeStamp = 0;
     uint64_t _latestHistoryTimeStampAtDownloadStart = 0;
     IWifiLibraryWrapper* _pWifiLibaray;

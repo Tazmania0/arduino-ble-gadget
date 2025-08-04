@@ -22,6 +22,31 @@ void DataProvider::begin() {
     _BLELibrary.startAdvertising();
 }
 
+// For old version of the Sensirion's library
+// void DataProvider::writeValueToCurrentSample(float value,
+//                                              SignalType signalType) {
+//     // Check for valid value
+//     if (isnan(value)) {
+//         return;
+//     }
+
+//     // Check for correct signal type
+//     if (_sampleConfig.sampleSlots.count(signalType) ==
+//         0) { // implies signal type is not part of sample
+//         return;
+//     }
+
+//     // Get relevant metaData
+//     uint16_t (*converterFunction)(float value) =
+//         _sampleConfig.sampleSlots.at(signalType).converterFunction;
+//     size_t offset = _sampleConfig.sampleSlots.at(signalType).offset;
+
+//     // Convert float to 16 bit int
+//     uint16_t convertedValue = converterFunction(value);
+//     _currentSample.writeValue(convertedValue, offset);
+// }
+
+// For new version of the Sensirion's library
 void DataProvider::writeValueToCurrentSample(float value,
                                              SignalType signalType) {
     // Check for valid value
@@ -123,12 +148,48 @@ void DataProvider::setSampleConfig(DataType dataType) {
     _sampleHistory.setSampleSize(_sampleConfig.sampleSizeBytes);
 }
 
+void DataProvider::setHistoryInterval(int interval) {
+    _historyIntervalMilliSeconds = static_cast<uint64_t>(interval);
+    _sampleHistory.reset();
+    _BLELibrary.characteristicSetValue(
+        NUMBER_OF_SAMPLES_UUID, _sampleHistory.numberOfSamplesInHistory());
+    _historyIntervalChanged = true;
+}
+
+uint64_t DataProvider::getHistoryInterval() const {
+    return _historyIntervalMilliSeconds;
+}
+
+bool DataProvider::historyIntervalChanged() {
+    if (_historyIntervalChanged) {
+        _historyIntervalChanged = false;
+        return true;
+    }
+    return false;
+}
+
 String DataProvider::getDeviceIdString() const {
     char cDevId[6];
     std::string macAddress = _BLELibrary.getDeviceAddress();
     snprintf(cDevId, sizeof(cDevId), "%s:%s", macAddress.substr(12, 14).c_str(),
              macAddress.substr(15, 17).c_str());
     return cDevId;
+}
+
+String DataProvider::getWifiSSID() {
+    return _wifiSSID;
+}
+
+String DataProvider::getWifiPassword() {
+    return _wifiPassword;
+}
+
+bool DataProvider::wifiChanged() {
+    if (_wifiSettingsChanged) {
+        _wifiSettingsChanged = false;
+        return true;
+    }
+    return false;
 }
 
 bool DataProvider::isDownloading() const {
@@ -269,6 +330,7 @@ void DataProvider::onHistoryIntervalChange(int interval) {
     _sampleHistory.reset();
     _BLELibrary.characteristicSetValue(
         NUMBER_OF_SAMPLES_UUID, _sampleHistory.numberOfSamplesInHistory());
+    _historyIntervalChanged = true;
 }
 
 void DataProvider::onConnectionEvent() {
